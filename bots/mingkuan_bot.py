@@ -48,22 +48,19 @@ class MyPlayer(Player):
             self.set_bid(0)
             return
         money_to_spend = 0
-        bid = 0
-        bid_every = 100
+        bid = self.bids[turn_num % 2]
         # TODO: adjust bid according to opponent's action
         while True:
             num_to_build = 0
             while num_to_build < len(route):
                 new_money_to_spend = money_to_spend + (250 if num_to_build == len(route) - 1 else 10) * \
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
-                # bid = new_money_to_spend // bid_every
-                bid = self.bids[turn_num % 2]
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1
                 else:
                     break
-            if num_to_build:
+            if num_to_build > 0:
                 self.predicted_last_build = (route[num_to_build - 1][0], route[num_to_build - 1][1])
             for i in range(num_to_build):
                 self.build(StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1])

@@ -41,9 +41,11 @@ class MyPlayer(Player):
             while num_to_build < len(route):
                 new_money_to_spend = money_to_spend + (250 if num_to_build == len(route) - 1 else 10) * \
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
-                bid = new_money_to_spend // bid_every
-                if turn_num == 0:
+                # bid = new_money_to_spend // bid_every
+                if (turn_num % 2 == 1) == (player_info.team == Team.RED):
                     bid = 0
+                else:
+                    bid = 1
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1
@@ -53,6 +55,12 @@ class MyPlayer(Player):
                 self.build(StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1])
             if num_to_build < len(route):
                 break
+            for i in range(num_to_build):
+                map[route[i][0]][route[i][1]].structure = Structure(
+                    StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1],
+                    player_info.team)
+            self.find_tiles(map, player_info)
+            route, population = self.find_nearest_towers_to_build(map, player_info)
         self.set_bid(bid)
 
     def find_tiles(self, map, player_info):
@@ -139,6 +147,8 @@ class MyPlayer(Player):
         best_tower_route = [best_tower]
         while best_tower_route[-1][0] != -1:
             best_tower_route.append(dist_from[best_tower_route[-1][0], best_tower_route[-1][1]])
+            if best_tower_route[-1][0] != -1 and dist[best_tower_route[-1][0], best_tower_route[-1][1]] == 0:
+                break
         best_tower_route.pop()
         best_tower_route.reverse()
         assert best_tower_route[-1] == best_tower

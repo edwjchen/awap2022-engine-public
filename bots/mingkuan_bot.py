@@ -161,11 +161,11 @@ class MyPlayer(Player):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
                         min_passability = passability
-                    # if (not best_tower_ratio) and dist[x,y] < min_dist and passability < min_passability:
-                    #     print(x,y)
-                    #     min_passability = passability
-                    #     best_tower = (x, y)
-                    #     count += 1
+                    if best_tower_ratio == 0 and dist[x,y] <= min_dist and passability <= min_passability:
+                        min_passability = passability
+                        min_dist = dist[x,y]
+                        best_tower = (x, y)
+                        count += 1
 
         if best_tower is None:
             return None, None

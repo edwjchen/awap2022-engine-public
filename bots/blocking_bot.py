@@ -312,10 +312,33 @@ class MyPlayer(Player):
                                 1] >= self.height:
                                 continue
                             tower_population_other[new_pos[0], new_pos[1]] += map[x][y].population
+
+        other_reachable = np.full((maxhw, maxhw), False)
+        q2 = list(self.other_structs)
+        for i in self.other_structs:
+            other_reachable[i] = True
+        current_dist = 0
+        while current_dist < len(q2):
+            pos = q2[current_dist]
+            current_dist += 1
+            for d in GC.MOVE_DIRS:
+                new_pos = (pos[0] + d[0], pos[1] + d[1])
+                if new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or new_pos[1] >= self.height:
+                    continue
+                if map[new_pos[0]][new_pos[1]].structure is not None and map[new_pos[0]][
+                    new_pos[1]].structure.team == player_info.team:
+                    continue
+                if other_reachable[new_pos]:
+                    continue
+                other_reachable[new_pos] = True
+                q2.append(new_pos)
+
         self.best_blocking = None
         best_blocking_ratio = 0
         for x in range(self.width):
             for y in range(self.height):
+                if not other_reachable[x, y]:
+                    continue
                 current_ratio = tower_population_other[x][y] / dist[x, y]
                 # TODO: this ratio is a very inaccurate heuristic
                 if self.best_blocking is None or current_ratio > best_blocking_ratio:
@@ -342,38 +365,3 @@ class MyPlayer(Player):
         best_tower_route.reverse()
         assert best_tower_route[-1] == best_tower
         return best_tower_route, tower_population[best_tower[0], best_tower[1]]
-
-
-from heapq import heappush, heappop
-
-
-class PQNode:
-
-    def __init__(self, state, path, cost_from_start):
-        self.state = state
-        self.path = path
-        self.g = cost_from_start
-
-    def __gt__(self, other_node):
-        return self.state > other_node.state
-
-
-class PriorityQueue:
-
-    def __init__(self):
-        self.elements = []
-
-    def nonempty(self):
-        return bool(self.elements)
-
-    def push(self, element, priority):
-        heappush(self.elements, (priority, element))
-
-    def pop(self):
-        return heappop(self.elements)[1]
-
-    def contains(self, state):
-        return any(
-            element.state == state
-            for priority, element in self.elements
-        )

@@ -17,5 +17,10 @@ block2:
 	python3 run_game.py -m island -p2 blocking_bot -p1 merged_bot
 
 merge:
-	python3 run_game.py -p2 blocking_bot -p1 merged_bot
+	python3 run_game.py -m ridges -p2 blocking_bot -p1 merged_bot
 
+merge2:
+	python3 run_game.py -m ridges -p1 blocking_bot -p2 merged_bot
+
+merge3:
+	python3 run_game.py -m island -p1 merged_bot -p2 random_bot

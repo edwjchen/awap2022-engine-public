@@ -428,6 +428,7 @@ class MyPlayer(Player):
                         min_dist = dist[x, y]
                         best_tower = (x, y)
                         count += 1
+
         if best_tower is None:
             return None, None
         best_tower_route = [best_tower]

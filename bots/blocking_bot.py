@@ -49,7 +49,7 @@ class MyPlayer(Player):
             return False
         if tower_money == 0:
             return True
-        return self.blocking_population / blocking_money > tower_population / tower_money
+        return self.blocking_population / blocking_money * 10 > tower_population / tower_money
 
     def play_turn(self, turn_num, map, player_info):
         if self.my_generators is None:
@@ -250,8 +250,10 @@ class MyPlayer(Player):
         while route[-1][0] != -1:
             route.append(dist_from[route[-1][0], route[-1][1]])
             #print(f'distfrom {route[-1]} is {dist_from[route[-1][0], route[-1][1]]}')
-            if route[-1][0] != -1 and dist[route[-1][0], route[-1][1]] == 0:
+            if route[-1][0] != -1 and route[-1] == S:
                 break
+        if not (route[-1] == S or map[S[0]][S[1]].structure is not None):
+            print(route, S)
         route.reverse()
         nearest_pos = 0
         min_dist = None
@@ -379,15 +381,37 @@ class MyPlayer(Player):
                     self.best_blocking = (x, y)
                     best_blocking_ratio = current_ratio
         self.best_blocking_route = self.route_to_block(self.best_blocking, map, player_info, dist, dist_from)
+
+        # best_tower = None
+        # best_tower_ratio = 0
+        # for x in range(self.width):
+        #     for y in range(self.height):
+        #         if map[x][y].structure is None:
+        #             current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
+        #             if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio):
+        #                 best_tower = (x, y)
+        #                 best_tower_ratio = current_ratio
+
         best_tower = None
         best_tower_ratio = 0
+        min_passability = 10
+        count = 0
+        min_dist = 10
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].structure is None:
+                    passability = map[x][y].passability
                     current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
                     if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
+                        min_passability = passability
+                    if best_tower_ratio == 0 and 0 < dist[x, y] <= min_dist and passability <= min_passability:
+                        min_passability = passability
+                        min_dist = dist[x, y]
+                        best_tower = (x, y)
+                        count += 1
+
         if best_tower is None:
             return None, None
         best_tower_route = [best_tower]

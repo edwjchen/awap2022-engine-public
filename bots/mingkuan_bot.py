@@ -19,15 +19,31 @@ class MyPlayer(Player):
         self.other_structs = None
         self.width = 0
         self.height = 0
+        self.bids = None
+        self.predicted_last_build = None
         self.tower_dirs = [(-2, 0), (-1, -1), (-1, 0), (-1, 1), (0, -2), (0, -1), (0, 0), (0, 1), (0, 2),
                            (1, -1), (1, 0), (1, 1), (2, 0)]
         return
 
     def play_turn(self, turn_num, map, player_info):
+
+        if turn_num <= 1:
+            if player_info.team == Team.RED:
+                self.bids = [1, 0]
+            else:
+                self.bids = [0, 1]
+
         if self.my_generators is None:
             self.width = len(map)
             self.height = len(map[0])
         self.find_tiles(map, player_info)
+
+        # Set bid
+        if self.predicted_last_build:
+            if (self.predicted_last_build[0], self.predicted_last_build[1]) not in self.my_structs:
+                self.bids[(turn_num + 1) % 2] += 1
+        self.predicted_last_build = None
+
         route, population = self.find_nearest_towers_to_build(map, player_info)
         if route is None:
             self.set_bid(0)
@@ -42,15 +58,14 @@ class MyPlayer(Player):
                 new_money_to_spend = money_to_spend + (250 if num_to_build == len(route) - 1 else 10) * \
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
                 # bid = new_money_to_spend // bid_every
-                if (turn_num % 2 == 1) == (player_info.team == Team.RED):
-                    bid = 1
-                else:
-                    bid = 0
+                bid = self.bids[turn_num % 2]
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1
                 else:
                     break
+            if num_to_build:
+                self.predicted_last_build = (route[num_to_build - 1][0], route[num_to_build - 1][1])
             for i in range(num_to_build):
                 self.build(StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1])
             if num_to_build < len(route):

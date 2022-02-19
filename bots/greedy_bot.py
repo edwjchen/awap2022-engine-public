@@ -54,17 +54,30 @@ class MyPlayer(Player):
         self.height = len(map[0])
         self.find_tiles(map, player_info)
         path = self.compute_cluster(map, player_info)
+        print(path)
         remaining_money = player_info.money
         for i, (x, y) in enumerate(path):
             if i < len(path) - 1:
-                if remaining_money >= map[x][y].passability * StructureType.ROAD.get_base_cost():
+                cost = map[x][y].passability * StructureType.ROAD.get_base_cost()
+                if remaining_money >= cost:
                     self.build(StructureType.ROAD, x, y)
+                    print('Build road at', x, y)
+                    remaining_money -= cost
                 else:
                     continue
             else:
-                if remaining_money >= map[x][y].passability * StructureType.TOWER.get_base_cost():
+                cost = map[x][y].passability * StructureType.TOWER.get_base_cost()
+                if remaining_money >= cost:
                     self.build(StructureType.TOWER, x, y)
+                    remaining_money -= cost
+        print('Played turn')
         return
+
+    def in_range(self, x, y):
+        if x in range(self.width) and y in range(self.height):
+            return True
+        else:
+            return False
 
     def find_tiles(self, map, player_info):
         self.my_generators = []
@@ -92,8 +105,8 @@ class MyPlayer(Player):
     def compute_cluster(self, map, player_info):
         max_ratio = 0
         max_path = []
-        for x in range(self.width):
-            for y in range(self.height):
+        for x in range(30):
+            for y in range(30):
                 cluster_population = self.cluster_population(map, x, y, self.tower_radius)
                 if cluster_population > 0:
                     distance, path = self.cluster_path(map, x, y)
@@ -105,7 +118,8 @@ class MyPlayer(Player):
     def cluster_population(self, map, x, y, ds):
         cluster_population = 0
         for d in ds:
-            cluster_population += map[x + d[0]][y + d[1]].population
+            if self.in_range(x + d[0], y + d[1]) and not self.covered[x + d[0], y + d[1]]:
+                cluster_population += map[x + d[0]][y + d[1]].population
         return cluster_population
 
     def cluster_path(self, map, x, y):
@@ -131,7 +145,7 @@ class MyPlayer(Player):
             curr_node = PQ.pop()
             if curr_node.state == (x_2, y_2): 
                 #FOUND GOAL 
-                return curr_node.path
+                return curr_node.g, curr_node.path
             else: 
                 curr_x = curr_node.state[0]
                 curr_y = curr_node.state[1]
@@ -143,8 +157,8 @@ class MyPlayer(Player):
                         next_state = (next_state_x,next_state_y) 
                         next_path = curr_path.copy() 
                         next_path.append(next_state)
-                        if next_state_x >= 0 and next_state_x <= self.width and next_state_y >= 0 and next_state_y <= self.height: 
+                        if self.in_range(next_state_x, next_state_y): 
                             PQ.push(PQNode(next_state,next_path,curr_node.g + map[next_state_x][next_state_y].passability),0)
                     visited[curr_x][curr_y] = 1 
 
-        return False
+        return float('inf'), []

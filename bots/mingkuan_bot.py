@@ -42,6 +42,8 @@ class MyPlayer(Player):
                 new_money_to_spend = money_to_spend + (250 if num_to_build == len(route) - 1 else 10) * \
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
                 bid = new_money_to_spend // bid_every
+                if turn_num == 0:
+                    bid = 0
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1
@@ -128,9 +130,10 @@ class MyPlayer(Player):
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].structure is None:
-                    if best_tower is None or dist[x, y] > 0 and tower_population[x][y] / dist[x, y] > best_tower_ratio:
+                    current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
+                    if best_tower is None or dist[x, y] > 0 and current_ratio > best_tower_ratio:
                         best_tower = (x, y)
-                        best_tower_ratio = tower_population[x][y] / dist[x, y]
+                        best_tower_ratio = current_ratio
         if best_tower is None:
             return None, None
         best_tower_route = [best_tower]

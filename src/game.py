@@ -415,7 +415,6 @@ class Game:
         for turn_num in range(GC.NUM_ROUNDS):
             self.play_turn(turn_num)
 
-        # Win Condition: Returns True if Red wins
         rScore, bScore = self.p1_state.utility, self.p2_state.utility
         if rScore == bScore:
             # number of towers
@@ -435,9 +434,14 @@ class Game:
             rScore, bScore = self.p1_state.money, self.p2_state.money
         if rScore == bScore:
             # everything failed (basically impossible lmao)
-            rScore, bScore = 1,0
+            rScore = self.p1_state.time_bank.time_left
+            bScore = self.p2_state.time_bank.time_left
 
         self.winner = 1 if rScore > bScore else 2
+        if self.winner == 1:
+            print("Team.RED wins!")
+        else:
+            print("Team.BLUE wins!")
 
     '''
     Runs a single turn of the game

@@ -42,7 +42,7 @@ class PriorityQueue:
 class MyPlayer(Player):
 
     def __init__(self):
-        print("Init")
+        # print("Init")
         self.turn = 0
         self.cluster_size = 5
         self.tower_radius = [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [1, -1], [1, 0], [1, 1], [2, 0]]
@@ -80,7 +80,7 @@ class MyPlayer(Player):
             return False
 
     def find_tiles(self, map, player_info):
-        self.my_generators = []
+        self.my_towers = []
         self.my_structs = []
         self.other_structs = []
         self.covered = [[0] * self.height] * self.width
@@ -93,8 +93,8 @@ class MyPlayer(Player):
                     # check the structure on the tile is on my team
                     if st.team == player_info.team:
                         self.my_structs.append((x, y))
-                        if st.type == StructureType.GENERATOR:
-                            self.my_generators.append((x, y))
+                        if st.type == StructureType.GENERATOR or st.type == StructureType.TOWER:
+                            self.my_towers.append((x, y))
                         if st.type == StructureType.TOWER:
                             for dx, dy in self.tower_radius:
                                 if x + dx in range(self.width) and y + dy in range(self.height):
@@ -105,8 +105,8 @@ class MyPlayer(Player):
     def compute_cluster(self, map, player_info):
         max_ratio = 0
         max_path = []
-        for x in range(30):
-            for y in range(30):
+        for x in range(self.width):
+            for y in range(self.height):
                 cluster_population = self.cluster_population(map, x, y, self.tower_radius)
                 if cluster_population > 0:
                     distance, path = self.cluster_path(map, x, y)
@@ -123,11 +123,14 @@ class MyPlayer(Player):
         return cluster_population
 
     def cluster_path(self, map, x, y):
-        min_distance = math.inf
+        min_distance = float('inf')
         min_path = []
-        for s in self.my_structs:
+        # print(self.my_structs)
+        for s in self.my_towers:
             distance, path = self.path(map, s[0], s[1], x, y)
+            # print(distance, path)
             if distance <= min_distance:
+                min_distance = distance
                 min_path = path
         return min_distance, min_path
     

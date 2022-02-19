@@ -170,9 +170,19 @@ class Game:
         self.p1_name = p1_path
         self.p2_name = p2_path
 
-        self.MyPlayer1 = import_file("Player1", p1_path).MyPlayer
-        self.MyPlayer2 = import_file("Player2", p2_path).MyPlayer
         self.PlayerDQ = Player
+        try:
+            self.MyPlayer1 = import_file("Player1", p1_path).MyPlayer
+        except Exception as e:
+            print(f"Issue with loading player 1")
+            traceback.print_exc()
+            self.MyPlayer1 = Player
+        try:
+            self.MyPlayer2 = import_file("Player2", p2_path).MyPlayer
+        except Exception as e:
+            print(f"Issue with loading player 2")
+            traceback.print_exc()
+            self.MyPlayer2 = Player
 
         self.p1_state = PlayerInfo(Team.RED)
         self.p2_state = PlayerInfo(Team.BLUE)
@@ -193,13 +203,11 @@ class Game:
                 except TimeoutException as _:
                     state.time_bank.windows_warning()
                     print(f"[INIT TIMEOUT] {state.team}'s bot used >{GC.INIT_TIME_LIMIT} seconds to initialize; it will not play.")
-                    state.dq = True
                     if state == self.p1_state:
                         self.p1 = self.PlayerDQ()
                     else: self.p2 = self.PlayerDQ()
                 except Exception as e:
                     print(f"[INIT TIMEOUT] {state.team}'s had an Exception")
-                    state.dq = True
                     traceback.print_exc()
                     if state == self.p1_state:
                         self.p1 = self.PlayerDQ()
@@ -502,10 +510,7 @@ class Game:
                     print("Exception from", state.team)
                     traceback.print_exc()
             else:
-                if state.dq:
-                    print(f"{state.team} turn skipped - DQ'ed")
-                else:
-                    print(f"{state.team} turn skipped - in timeout")
+                print(f"{state.team} turn skipped - in timeout")
         # update game state based on player actions
         # give build priority based on bid
         print(f'Round {turn_num} Bids: R : {self.p1._bid}, B : {self.p2._bid} - ', end='')

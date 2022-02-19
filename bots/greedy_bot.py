@@ -118,7 +118,7 @@ class MyPlayer(Player):
     def cluster_population(self, map, x, y, ds):
         cluster_population = 0
         for d in ds:
-            if self.in_range(x + d[0], y + d[1]) and not self.covered[x + d[0], y + d[1]]:
+            if self.in_range(x + d[0], y + d[1]) and not self.covered[x + d[0]][y + d[1]]:
                 cluster_population += map[x + d[0]][y + d[1]].population
         return cluster_population
 

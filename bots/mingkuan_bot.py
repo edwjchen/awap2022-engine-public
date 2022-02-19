@@ -26,12 +26,11 @@ class MyPlayer(Player):
         return
 
     def play_turn(self, turn_num, map, player_info):
-        print('Turn num', turn_num)
         if turn_num == 0:
             if player_info.team == Team.RED:
-                self.bids = [1, 0]
-            else:
                 self.bids = [0, 1]
+            else:
+                self.bids = [1, 0]
 
         if self.my_generators is None:
             self.width = len(map)

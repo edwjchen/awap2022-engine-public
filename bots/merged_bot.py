@@ -26,6 +26,8 @@ class MyPlayer(Player):
         self.best_blocking = None
         self.best_blocking_route = None
         self.blocking_population = 0
+        self.bids = None
+        self.predicted_last_build = None
         return
 
     def choose_to_block(self, map, tower_route, tower_population):
@@ -52,10 +54,24 @@ class MyPlayer(Player):
         return self.blocking_population / blocking_money > tower_population / tower_money
 
     def play_turn(self, turn_num, map, player_info):
+        if turn_num == 0:
+            if player_info.team == Team.RED:
+                self.bids = [0, 1]
+            else:
+                self.bids = [1, 0]
+
         if self.my_generators is None:
             self.width = len(map)
             self.height = len(map[0])
         self.find_tiles(map, player_info)
+
+
+        # Set bid
+        if self.predicted_last_build:
+            if (self.predicted_last_build[0], self.predicted_last_build[1]) in self.other_structs:
+                self.bids[(turn_num + 1) % 2] += 1
+        self.predicted_last_build = None
+
         route, population = self.find_best_to_build(map, player_info)
         choose_to_block_now = False
         if self.choose_to_block(map, route, population):
@@ -66,8 +82,7 @@ class MyPlayer(Player):
                 self.set_bid(0)
                 return
         money_to_spend = 0
-        bid = 0
-        bid_every = 100
+        bid = self.bids[turn_num % 2]
         # TODO: adjust bid according to opponent's action
         while True:
             num_to_build = 0
@@ -85,6 +100,10 @@ class MyPlayer(Player):
                     num_to_build += 1
                 else:
                     break
+
+            if num_to_build > 0:
+                self.predicted_last_build = (route[num_to_build - 1][0], route[num_to_build - 1][1])
+
             for i in range(num_to_build):
                 self.build(
                     StructureType.TOWER if (i == len(route) - 1 and not choose_to_block_now) else StructureType.ROAD,
@@ -379,15 +398,36 @@ class MyPlayer(Player):
                     self.best_blocking = (x, y)
                     best_blocking_ratio = current_ratio
         self.best_blocking_route = self.route_to_block(self.best_blocking, map, player_info, dist, dist_from)
+
+        # best_tower = None
+        # best_tower_ratio = 0
+        # for x in range(self.width):
+        #     for y in range(self.height):
+        #         if map[x][y].structure is None:
+        #             current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
+        #             if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio):
+        #                 best_tower = (x, y)
+        #                 best_tower_ratio = current_ratio
+
         best_tower = None
         best_tower_ratio = 0
+        min_passability = 10
+        count = 0
+        min_dist = 10
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].structure is None:
+                    passability = map[x][y].passability
                     current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
                     if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
+                        min_passability = passability
+                    if best_tower_ratio == 0 and 0 < dist[x, y] <= min_dist and passability <= min_passability:
+                        min_passability = passability
+                        min_dist = dist[x, y]
+                        best_tower = (x, y)
+                        count += 1
         if best_tower is None:
             return None, None
         best_tower_route = [best_tower]

@@ -76,8 +76,12 @@ class MyPlayer(Player):
         current_dist = 0
         maxhw = max(self.height, self.width)
         dist = np.full((maxhw, maxhw), -1)
-        dist[tuple(self.my_structs)] = 0
-        dist_from = np.full((maxhw, maxhw), (-1, -1))
+        for st in self.my_structs:
+            dist[st] = 0
+        # dist[list(self.my_structs)] = 0
+        value = np.empty((), dtype=object)
+        value[()] = (-1, -1)
+        dist_from = np.full((maxhw, maxhw), value, dtype=object)
         while current_dist < len(q):
             for pos in q[current_dist]:
                 if dist[pos] != current_dist:
@@ -107,7 +111,7 @@ class MyPlayer(Player):
                         if new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or new_pos[1] >= self.height:
                             continue
                         if map[new_pos[0]][new_pos[1]].structure is not None:
-                            st = map[x][y].structure
+                            st = map[new_pos[0]][new_pos[1]].structure
                             if st.type == StructureType.TOWER:
                                 if st.team == player_info.team:
                                     covered_by_us = True

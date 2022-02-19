@@ -26,8 +26,8 @@ class MyPlayer(Player):
         return
 
     def play_turn(self, turn_num, map, player_info):
-
-        if turn_num <= 1:
+        print('Turn num', turn_num)
+        if turn_num == 0:
             if player_info.team == Team.RED:
                 self.bids = [1, 0]
             else:

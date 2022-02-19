@@ -39,7 +39,7 @@ class MyPlayer(Player):
 
         # Set bid
         if self.predicted_last_build:
-            if (self.predicted_last_build[0], self.predicted_last_build[1]) not in self.my_structs:
+            if (self.predicted_last_build[0], self.predicted_last_build[1]) in self.other_structs:
                 self.bids[(turn_num + 1) % 2] += 1
         self.predicted_last_build = None
 
@@ -56,11 +56,12 @@ class MyPlayer(Player):
                 new_money_to_spend = money_to_spend + (250 if num_to_build == len(route) - 1 else 10) * \
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
                 if new_money_to_spend + bid <= player_info.money:
-                    money_to_spend = new_money_to_spend
+                    money_to_spend = new_money_to_spend + bid
                     num_to_build += 1
                 else:
                     break
             if num_to_build > 0:
+                print('Route: ', route)
                 self.predicted_last_build = (route[num_to_build - 1][0], route[num_to_build - 1][1])
             for i in range(num_to_build):
                 self.build(StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1])
@@ -158,11 +159,11 @@ class MyPlayer(Player):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
                         min_passability = passability
-                    if best_tower_ratio == 0 and dist[x,y] <= min_dist and passability <= min_passability:
-                        min_passability = passability
-                        min_dist = dist[x,y]
-                        best_tower = (x, y)
-                        count += 1
+                    # if best_tower_ratio == 0 and dist[x,y] <= min_dist and passability <= min_passability:
+                    #     min_passability = passability
+                    #     min_dist = dist[x,y]
+                    #     best_tower = (x, y)
+                    #     count += 1
 
         if best_tower is None:
             return None, None

@@ -129,6 +129,9 @@ if os.name != 'nt':
             yield
         finally:
             signal.alarm(0)
+else:
+    class TimeoutException(Exception): pass
+
 
 
 '''
@@ -173,18 +176,18 @@ class Game:
         self.p2_state = PlayerInfo(Team.BLUE)
 
         for player, state in [(self.MyPlayer1, self.p1_state),(self.MyPlayer2, self.p2_state)]:
-            if os.name == "nt":
-                t0 = time.time()
-                if state == self.p1_state: self.p1 = player()
-                else: self.p2 = player()
-                t1 = time.time()
-                if t1 - t0 > GC.INIT_TIME_LIMIT:
-                    raise TimeoutException
-            else:
                 try:
-                    with time_limit(GC.INIT_TIME_LIMIT):
+                    if os.name == "nt":
+                        t0 = time.time()
                         if state == self.p1_state: self.p1 = player()
                         else: self.p2 = player()
+                        t1 = time.time()
+                        if t1 - t0 > GC.INIT_TIME_LIMIT:
+                            raise TimeoutException
+                    else:
+                        with time_limit(GC.INIT_TIME_LIMIT):
+                            if state == self.p1_state: self.p1 = player()
+                            else: self.p2 = player()
                 except TimeoutException as _:
                     state.time_bank.windows_warning()
                     print(f"[INIT TIMEOUT] {state.team}'s bot used >{GC.INIT_TIME_LIMIT} seconds to initialize; it will not play.")
@@ -469,7 +472,9 @@ class Game:
                         player.play_turn(turn_num, self.map_copy(),state._copy())
                         t1 = time.time()
                         penalty = t1 - t0
-                        if penalty > limit:
+                        state.time_bank.time_left -= penalty
+                        if state.time_bank.time_left < 0:
+                            state.time_bank.time_left = 0
                             raise TimeoutException
                     else:
                         t0 = time.time()

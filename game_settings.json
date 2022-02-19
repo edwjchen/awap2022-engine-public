@@ -1,6 +1,6 @@
 {
-  "p1": "random_bot",
-  "p2": "template_bot",
+  "p1": "template_bot",
+  "p2": "random_bot",
   "map": "ridges",
   "replay": null
 }

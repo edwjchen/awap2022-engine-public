@@ -11,6 +11,8 @@ import json
 import signal
 from contextlib import contextmanager
 import os
+import traceback
+
 
 from .structure import *
 from .player import *
@@ -195,6 +197,14 @@ class Game:
                     if state == self.p1_state:
                         self.p1 = self.PlayerDQ()
                     else: self.p2 = self.PlayerDQ()
+                except Exception as e:
+                    print(f"[INIT TIMEOUT] {state.team}'s had an Exception")
+                    state.dq = True
+                    traceback.print_exc()
+                    if state == self.p1_state:
+                        self.p1 = self.PlayerDQ()
+                    else: self.p2 = self.PlayerDQ()
+
 
         self.winner = None
 
@@ -488,10 +498,14 @@ class Game:
                     state.time_bank.windows_warning()
                     print(f"[{GC.TIMEOUT} ROUND TIMEOUT START] {state.team} emptied their time bank.")
                     state.time_bank.paused_at = turn_num
+                except Exception as e:
+                    print("Exception from", state.team)
+                    traceback.print_exc()
             else:
                 if state.dq:
                     print(f"{state.team} turn skipped - DQ'ed")
-                print(f"{state.team} turn skipped - in timeout")
+                else:
+                    print(f"{state.team} turn skipped - in timeout")
         # update game state based on player actions
         # give build priority based on bid
         print(f'Round {turn_num} Bids: R : {self.p1._bid}, B : {self.p2._bid} - ', end='')

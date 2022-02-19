@@ -158,7 +158,7 @@ class MyPlayer(Player):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
                         min_passability = passability
-                    if best_tower_ratio == 0 and dist[x,y] <= min_dist and passability <= min_passability:
+                    if best_tower_ratio == 0 and 0 < dist[x,y] <= min_dist and passability <= min_passability:
                         min_passability = passability
                         min_dist = dist[x,y]
                         best_tower = (x, y)

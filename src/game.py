@@ -173,25 +173,25 @@ class Game:
         self.p2_state = PlayerInfo(Team.BLUE)
 
         for player, state in [(self.MyPlayer1, self.p1_state),(self.MyPlayer2, self.p2_state)]:
-            try:
-                if os.name == "nt": # Windows
-                    t0 = time.time()
-                    if state == self.p1_state: self.p1 = player()
-                    else: self.p2 = player()
-                    t1 = time.time()
-                    if t1 - t0 > GC.INIT_TIME_LIMIT:
-                        raise TimeoutException
-                else:
+            if os.name == "nt":
+                t0 = time.time()
+                if state == self.p1_state: self.p1 = player()
+                else: self.p2 = player()
+                t1 = time.time()
+                if t1 - t0 > GC.INIT_TIME_LIMIT:
+                    raise TimeoutException
+            else:
+                try:
                     with time_limit(GC.INIT_TIME_LIMIT):
                         if state == self.p1_state: self.p1 = player()
                         else: self.p2 = player()
-            except TimeoutException as _:
-                state.time_bank.windows_warning()
-                print(f"[INIT TIMEOUT] {state.team}'s bot used >{GC.INIT_TIME_LIMIT} seconds to initialize; it will not play.")
-                state.dq = True
-                if state == self.p1_state:
-                    self.p1 = self.PlayerDQ()
-                else: self.p2 = self.PlayerDQ()
+                except TimeoutException as _:
+                    state.time_bank.windows_warning()
+                    print(f"[INIT TIMEOUT] {state.team}'s bot used >{GC.INIT_TIME_LIMIT} seconds to initialize; it will not play.")
+                    state.dq = True
+                    if state == self.p1_state:
+                        self.p1 = self.PlayerDQ()
+                    else: self.p2 = self.PlayerDQ()
 
         self.winner = None
 
@@ -460,6 +460,7 @@ class Game:
             state.time_bank.time_left += GC.TIME_INC
             if state.newly_active():
                 print(f"[TIMEOUT END] {self.p1_state.team} resumes turns.")
+
             if state.active():
                 # play turn
                 try:

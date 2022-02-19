@@ -22,7 +22,7 @@ Maps should be placed in the `maps/` folder.
 ## How-to:
 
 ### Download
-* `git clone https://github.com/rzhan11/awap2022-engine.git` - Downloads the repo
+* `git clone https://github.com/rzhan11/awap2022-engine-public.git` - Downloads the repo
 
 ### Run a match
 * `cd` into this repo

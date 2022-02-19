@@ -2,6 +2,7 @@ import sys
 
 import random
 import math
+from heapq import heappush, heappop
 
 from src.player import *
 from src.structure import *
@@ -54,7 +55,7 @@ class MyPlayer(Player):
         self.find_tiles(map, player_info)
         path = self.compute_cluster(map, player_info)
         remaining_money = player_info.money
-        for i, (x, y) in enumerate(path)
+        for i, (x, y) in enumerate(path):
             if i < len(path) - 1:
                 if remaining_money >= map[x][y].passability * StructureType.ROAD.get_base_cost():
                     self.build(StructureType.ROAD, x, y)
@@ -89,58 +90,13 @@ class MyPlayer(Player):
                         self.other_structs.append((x, y))
 
     def compute_cluster(self, map, player_info):
-<<<<<<< HEAD
-        for x in range(self.width - self.cluster_size):
-            for y in range(self.height - self.cluster_size):
-                cluster_population = 0
-                for i in range(self.cluster_size):
-                    for j in range(self.cluster_size):
-                        cluster_population += map[x + i][y + j].population
-
-    def cluster_distance(self, map, x_2, y_2):
-        for 
-
-    def distance(self, amap, x_1, y_1, x_2, y_2):
-        output = []
-        visited = [[0 for j in range(self.height)] for i in range(self.width)]
-        for i in range(self.width): 
-            for j in range(self.height): 
-                if (i,j) in self.other_structs: 
-                    visited[i][j] = 1
-
-        PQ = PriorityQueue() 
-        PQ.push(PQNode((x_1,y_1),[],0),#TODO HEURISTIC)
-        while PQ.nonempty(): 
-            curr_node = PQ.pop()
-            if curr_node.state == (x_2,y_2): 
-                #FOUND GOAL 
-                return curr_node.path
-            else: 
-                curr_x = curr_node.state[0]
-                curr_y = curr_node.state[1]
-                if visited[curr_x][curr_y] == 0: 
-                    curr_path = curr_node.path 
-                    for d in GC.MOVE_DIRS: # EXPAND NEXT POSSIBLE 
-                        next_state_x = curr_x + d[0]
-                        next_state_y = curr_y + d[1]
-                        next_state = (next_state_x,next_state_y) 
-                        next_path = curr_path.copy() 
-                        next_path.append(next_state)
-                        if next_state_x >= 0 and next_state_x <= self.width and next_state_y >= 0 and next_state_y <= self.height: 
-                            PQ.push(PQNode(next_state,next_path,curr_node.g + amap[next_state_x][next_state_y].passability),0)
-                    visited[curr_x][curr_y] = 1 
-
-        return False
-
-
-=======
         max_ratio = 0
         max_path = []
         for x in range(self.width):
             for y in range(self.height):
-                cluster_population = self.cluster_population(self, map, x, y, self.tower_radius)
+                cluster_population = self.cluster_population(map, x, y, self.tower_radius)
                 if cluster_population > 0:
-                    distance, path = self.cluster_path(self, map, x, y)
+                    distance, path = self.cluster_path(map, x, y)
                     if distance > 0 and cluster_population / distance > max_ratio:
                         max_ratio = cluster_population / distance
                         max_path = path
@@ -156,12 +112,39 @@ class MyPlayer(Player):
         min_distance = math.inf
         min_path = []
         for s in self.my_structs:
-            distance, path = path(map, s[0], s[1], x, y)
+            distance, path = self.path(map, s[0], s[1], x, y)
             if distance <= min_distance:
                 min_path = path
         return min_distance, min_path
     
     def path(self, map, x_1, y_1, x_2, y_2):
-        # todo
-        return 0
->>>>>>> 4dc0f22bb7ef86b77e904b2344705a4fca85b920
+        output = []
+        visited = [[0 for j in range(self.height)] for i in range(self.width)]
+        for i in range(self.width): 
+            for j in range(self.height): 
+                if (i,j) in self.other_structs: 
+                    visited[i][j] = 1
+
+        PQ = PriorityQueue() 
+        PQ.push(PQNode((x_1, y_1), [], 0), 0)
+        while PQ.nonempty(): 
+            curr_node = PQ.pop()
+            if curr_node.state == (x_2, y_2): 
+                #FOUND GOAL 
+                return curr_node.path
+            else: 
+                curr_x = curr_node.state[0]
+                curr_y = curr_node.state[1]
+                if visited[curr_x][curr_y] == 0: 
+                    curr_path = curr_node.path 
+                    for d in GC.MOVE_DIRS: # EXPAND NEXT POSSIBLE 
+                        next_state_x = curr_x + d[0]
+                        next_state_y = curr_y + d[1]
+                        next_state = (next_state_x,next_state_y) 
+                        next_path = curr_path.copy() 
+                        next_path.append(next_state)
+                        if next_state_x >= 0 and next_state_x <= self.width and next_state_y >= 0 and next_state_y <= self.height: 
+                            PQ.push(PQNode(next_state,next_path,curr_node.g + map[next_state_x][next_state_y].passability),0)
+                    visited[curr_x][curr_y] = 1 
+
+        return False

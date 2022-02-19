@@ -138,14 +138,56 @@ class MyPlayer(Player):
         upper_left = min(block_positions)
         bottom_right = max(block_positions)
         # TODO: boundaries
-        if upper_left[0] == 0 or bottom_right[0] == self.width - 1:
-            return None
-        for pos in block_positions:
-            if pos[1] == 0 or pos[1] == self.height - 1:
-                return None
-        floating_in_the_middle = True
         S = (upper_left[0], upper_left[1] - 1)
         T = (upper_left[0] - 1, upper_left[1])
+        leftmost = 10000
+        rightmost = -1
+        for pos in block_positions:
+            leftmost = min(leftmost, pos[1])
+            rightmost = max(rightmost, pos[1])
+        floating_in_the_middle = True
+        if upper_left[0] == 0 or bottom_right[0] == self.width - 1:
+            floating_in_the_middle = False
+        if leftmost == 0 or rightmost == self.height - 1:
+            floating_in_the_middle = False
+        if not floating_in_the_middle:
+            if (upper_left[0] == 0) + (bottom_right[0] == self.width - 1) + (leftmost == 0) + (rightmost == self.height - 1) == 1:
+                # only touch 1 boundary
+                if upper_left[0] == 0:
+                    S = (0, upper_left[1] - 1)
+                    T = -1
+                    for pos in block_positions:
+                        if pos[0] == 0 and pos[1] > T:
+                            T = pos[1]
+                    T = (0, T + 1)
+                elif bottom_right[0] == self.width - 1:
+                    S = (self.width - 1, bottom_right[1] + 1)
+                    T = 10000
+                    for pos in block_positions:
+                        if pos[0] == self.width - 1 and pos[1] < T:
+                            T = pos[1]
+                    T = (self.width - 1, T - 1)
+                elif leftmost == 0:
+                    S = 10000
+                    T = -1
+                    for pos in block_positions:
+                        if pos[1] == 0:
+                            S = min(S, pos[0])
+                            T = max(T, pos[0])
+                    S = (S - 1, 0)
+                    T = (T + 1, 0)
+                else:
+                    S = 10000
+                    T = -1
+                    for pos in block_positions:
+                        if pos[1] == self.height - 1:
+                            S = min(S, pos[0])
+                            T = max(T, pos[0])
+                    S = (S - 1, 0)
+                    T = (T + 1, 0)
+            else:
+                # TODO: 2 boundaries
+                return None
         q = [[]]  # queue for bfs
         q[0] = [S]
         current_dist = 0

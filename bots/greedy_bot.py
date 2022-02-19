@@ -13,6 +13,7 @@ class MyPlayer(Player):
         print("Init")
         self.turn = 0
         self.cluster_size = 5
+        self.tower_radius = [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [1, -1], [1, 0], [1, 1], [2, 0]]
         return
 
 
@@ -37,8 +38,10 @@ class MyPlayer(Player):
         self.my_generators = []
         self.my_structs = []
         self.other_structs = []
-        for x in range(self.MAP_WIDTH):
-            for y in range(self.MAP_HEIGHT):
+        self.covered = [[0] * self.height] * self.width
+
+        for x in range(self.width):
+            for y in range(self.height):
                 st = map[x][y].structure
                 # check the tile is not empty
                 if st is not None:
@@ -47,6 +50,10 @@ class MyPlayer(Player):
                         self.my_structs.append((x, y))
                         if st.type == StructureType.GENERATOR:
                             self.my_generators.append((x, y))
+                        if st.type == StructureType.TOWER:
+                            for dx, dy in self.tower_radius:
+                                if x + dx in range(self.width) and y + dy in range(self.height):
+                                    self.covered[x + dx][y + dy] = 1
                     else:
                         self.other_structs.append((x, y))
 
@@ -55,7 +62,7 @@ class MyPlayer(Player):
         max_path = []
         for x in range(self.width):
             for y in range(self.height):
-                cluster_population = self.cluster_population(self, map, x, y, [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [1, -1], [1, 0], [1, 1], [2, 0]])
+                cluster_population = self.cluster_population(self, map, x, y, self.tower_radius)
                 if cluster_population > 0:
                     distance, path = self.cluster_path(self, map, x, y)
                     if distance > 0 and cluster_population / distance > max_ratio:

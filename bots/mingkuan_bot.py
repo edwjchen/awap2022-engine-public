@@ -141,12 +141,15 @@ class MyPlayer(Player):
                 if map[x][y].structure is None:
                     passability = map[x][y].passability
                     current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
-                    if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio and passability <= min_passability):
+                    if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
                         min_passability = passability
+                    if not best_tower_ratio and passability < min_passability:
+                        # TODO: can make this random valid reachable location
+                        min_passability = passability
+                        best_tower = (x, y)
 
-        print("Best tower", best_tower, min_passability)
         if best_tower is None:
             return None, None
         best_tower_route = [best_tower]

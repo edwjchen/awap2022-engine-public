@@ -152,6 +152,7 @@ class MyPlayer(Player):
         best_tower_ratio = 0
         min_passability = 10
         count = 0 
+        min_dist = 10
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].structure is None:
@@ -161,7 +162,7 @@ class MyPlayer(Player):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
                         min_passability = passability
-                    # if (not best_tower_ratio) and dist[x,y] == 1:
+                    # if (not best_tower_ratio) and dist[x,y] < min_dist and passability < min_passability:
                     #     print(x,y)
                     #     min_passability = passability
                     #     best_tower = (x, y)

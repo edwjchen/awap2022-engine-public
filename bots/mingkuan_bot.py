@@ -43,9 +43,9 @@ class MyPlayer(Player):
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
                 # bid = new_money_to_spend // bid_every
                 if (turn_num % 2 == 1) == (player_info.team == Team.RED):
-                    bid = 0
-                else:
                     bid = 1
+                else:
+                    bid = 0
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1

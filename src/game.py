@@ -494,9 +494,7 @@ class Game:
                         player.play_turn(turn_num, self.map_copy(),state._copy())
                         t1 = time.time()
                         penalty = t1 - t0
-                        state.time_bank.time_left -= penalty
                         if state.time_bank.time_left < 0:
-                            state.time_bank.time_left = 0
                             raise TimeoutException
                     else:
                         t0 = time.time()
@@ -505,14 +503,20 @@ class Game:
                         t1 = time.time()
                         penalty = t1 - t0
                     state.time_bank.time_left -= penalty
-                    prev_time.append(penalty)
                 except TimeoutException as _:
                     state.time_bank.windows_warning()
                     print(f"[{GC.TIMEOUT} ROUND TIMEOUT START] {state.team} emptied their time bank.")
                     state.time_bank.paused_at = turn_num
+                    penalty = state.time_bank.time_left
+                    state.time_bank.time_left = 0
                 except Exception as e:
                     print("Exception from", state.team)
                     traceback.print_exc()
+                    penalty = state.time_bank.time_left
+                    state.time_bank.time_left = 0
+
+                # apply time penalty
+                prev_time.append(penalty)
             else:
                 print(f"{state.team} turn skipped - in timeout")
         # update game state based on player actions

@@ -21,6 +21,7 @@ class MyPlayer(Player):
         self.height = 0
         self.tower_dirs = [(-2, 0), (-1, -1), (-1, 0), (-1, 1), (0, -2), (0, -1), (0, 0), (0, 1), (0, 2),
                            (1, -1), (1, 0), (1, 1), (2, 0)]
+        self.best_blocking = None
         return
 
     def play_turn(self, turn_num, map, player_info):
@@ -28,7 +29,7 @@ class MyPlayer(Player):
             self.width = len(map)
             self.height = len(map[0])
         self.find_tiles(map, player_info)
-        route, population = self.find_nearest_towers_to_build(map, player_info)
+        route, population = self.find_best_to_build(map, player_info)
         if route is None:
             self.set_bid(0)
             return
@@ -43,9 +44,9 @@ class MyPlayer(Player):
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
                 # bid = new_money_to_spend // bid_every
                 if (turn_num % 2 == 1) == (player_info.team == Team.RED):
-                    bid = 1
-                else:
                     bid = 0
+                else:
+                    bid = 1
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1
@@ -60,7 +61,9 @@ class MyPlayer(Player):
                     StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1],
                     player_info.team)
             self.find_tiles(map, player_info)
-            route, population = self.find_nearest_towers_to_build(map, player_info)
+            route, population = self.find_best_to_build(map, player_info)
+            if route is None:
+                break
         self.set_bid(bid)
 
     def find_tiles(self, map, player_info):
@@ -80,7 +83,29 @@ class MyPlayer(Player):
                     else:
                         self.other_structs.add((x, y))
 
-    def find_nearest_towers_to_build(self, map, player_info):
+    def route_to_block(self, blocking_pos, map, player_info):
+        population_positions = [blocking_pos]
+        num = 0
+        while num < len(population_positions):
+            for d in GC.MOVE_DIRS:
+                new_pos = (population_positions[num][0] + d[0], population_positions[num][1] + d[1])
+                if new_pos in population_positions or new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or \
+                        new_pos[1] >= self.height or map[new_pos[0]][new_pos[1]].population == 0:
+                    continue
+                population_positions.append(new_pos)
+            num += 1
+        num = 0
+        block_positions = set()
+        while num < len(population_positions):
+            for d in GC.MOVE_DIRS:
+                new_pos = (population_positions[num][0] + d[0], population_positions[num][1] + d[1])
+                if new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or new_pos[1] >= self.height:
+                    continue
+                block_positions.add(new_pos)
+            num += 1
+        # TODO
+
+    def find_best_to_build(self, map, player_info):
         q = [[]]  # queue for bfs
         q[0] = list(self.my_structs)
         current_dist = 0
@@ -112,10 +137,12 @@ class MyPlayer(Player):
                         q[new_dist].append(new_pos)
             current_dist += 1
         tower_population = np.full((maxhw, maxhw), 0)
+        tower_population_other = np.full((maxhw, maxhw), 0)
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].population > 0:
                     covered_by_us = False
+                    covered_by_other = False
                     for d in self.tower_dirs:
                         new_pos = (x + d[0], y + d[1])
                         if new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or new_pos[1] >= self.height:
@@ -125,7 +152,8 @@ class MyPlayer(Player):
                             if st.type == StructureType.TOWER:
                                 if st.team == player_info.team:
                                     covered_by_us = True
-                                    break
+                                else:
+                                    covered_by_other = True
                     if not covered_by_us:
                         for d in self.tower_dirs:
                             new_pos = (x + d[0], y + d[1])
@@ -133,20 +161,31 @@ class MyPlayer(Player):
                                 1] >= self.height:
                                 continue
                             tower_population[new_pos[0], new_pos[1]] += map[x][y].population
+                    if not covered_by_other:
+                        for d in self.tower_dirs:
+                            new_pos = (x + d[0], y + d[1])
+                            if new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or new_pos[
+                                1] >= self.height:
+                                continue
+                            tower_population_other[new_pos[0], new_pos[1]] += map[x][y].population
+        self.best_blocking = None
+        best_blocking_ratio = 0
+        for x in range(self.width):
+            for y in range(self.height):
+                current_ratio = tower_population_other[x][y] / dist[x, y]
+                # TODO: this ratio is a very inaccurate heuristic
+                if self.best_blocking is None or current_ratio > best_blocking_ratio:
+                    self.best_blocking = (x, y)
+                    best_blocking_ratio = current_ratio
         best_tower = None
         best_tower_ratio = 0
-        min_passability = 10
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].structure is None:
-                    passability = map[x][y].passability
                     current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
-                    if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio and passability <= min_passability):
+                    if best_tower is None or dist[x, y] > 0 and current_ratio > best_tower_ratio:
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
-                        min_passability = passability
-
-        print("Best tower", best_tower, min_passability)
         if best_tower is None:
             return None, None
         best_tower_route = [best_tower]

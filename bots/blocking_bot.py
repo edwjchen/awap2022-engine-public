@@ -21,8 +21,25 @@ class MyPlayer(Player):
         self.height = 0
         self.tower_dirs = [(-2, 0), (-1, -1), (-1, 0), (-1, 1), (0, -2), (0, -1), (0, 0), (0, 1), (0, 2),
                            (1, -1), (1, 0), (1, 1), (2, 0)]
+        self.block_population_dirs = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
         self.best_blocking = None
+        self.best_blocking_route = None
+        self.blocking_population = 0
         return
+
+    def choose_to_block(self, map, tower_route, tower_population):
+        if self.best_blocking_route is None:
+            return False
+        if tower_route is None:
+            return True
+        tower_money = 0
+        for i in range(len(tower_route)):
+            tower_money += (25 if i == len(tower_route) - 1 else 1) * \
+                           map[tower_route[i][0]][tower_route[i][1]].passability
+        blocking_money = 0
+        for i in range(len(self.best_blocking_route)):
+            blocking_money += map[self.best_blocking_route[i][0]][self.best_blocking_route[i][1]].passability
+        return self.blocking_population / blocking_money > tower_population / tower_money
 
     def play_turn(self, turn_num, map, player_info):
         if self.my_generators is None:
@@ -30,9 +47,14 @@ class MyPlayer(Player):
             self.height = len(map[0])
         self.find_tiles(map, player_info)
         route, population = self.find_best_to_build(map, player_info)
-        if route is None:
-            self.set_bid(0)
-            return
+        choose_to_block_now = False
+        if self.choose_to_block(map, route, population):
+            choose_to_block_now = True
+            route = self.best_blocking_route
+        else:
+            if route is None:
+                self.set_bid(0)
+                return
         money_to_spend = 0
         bid = 0
         bid_every = 100
@@ -40,25 +62,29 @@ class MyPlayer(Player):
         while True:
             num_to_build = 0
             while num_to_build < len(route):
-                new_money_to_spend = money_to_spend + (250 if num_to_build == len(route) - 1 else 10) * \
+                new_money_to_spend = money_to_spend + (
+                    250 if (num_to_build == len(route) - 1 and not choose_to_block_now) else 10) * \
                                      map[route[num_to_build][0]][route[num_to_build][1]].passability
                 # bid = new_money_to_spend // bid_every
                 if (turn_num % 2 == 1) == (player_info.team == Team.RED):
-                    bid = 0
-                else:
                     bid = 1
+                else:
+                    bid = 0
                 if new_money_to_spend + bid <= player_info.money:
                     money_to_spend = new_money_to_spend
                     num_to_build += 1
                 else:
                     break
             for i in range(num_to_build):
-                self.build(StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1])
+                self.build(
+                    StructureType.TOWER if (i == len(route) - 1 and not choose_to_block_now) else StructureType.ROAD,
+                    route[i][0], route[i][1])
             if num_to_build < len(route):
                 break
             for i in range(num_to_build):
                 map[route[i][0]][route[i][1]].structure = Structure(
-                    StructureType.TOWER if i == len(route) - 1 else StructureType.ROAD, route[i][0], route[i][1],
+                    StructureType.TOWER if (i == len(route) - 1 and not choose_to_block_now) else StructureType.ROAD,
+                    route[i][0], route[i][1],
                     player_info.team)
             self.find_tiles(map, player_info)
             route, population = self.find_best_to_build(map, player_info)
@@ -83,11 +109,11 @@ class MyPlayer(Player):
                     else:
                         self.other_structs.add((x, y))
 
-    def route_to_block(self, blocking_pos, map, player_info):
-        population_positions = [blocking_pos]
+    def route_to_block(self, start_blocking_pos, map, player_info, original_dist, original_dist_from):
+        population_positions = [start_blocking_pos]
         num = 0
         while num < len(population_positions):
-            for d in GC.MOVE_DIRS:
+            for d in self.block_population_dirs:
                 new_pos = (population_positions[num][0] + d[0], population_positions[num][1] + d[1])
                 if new_pos in population_positions or new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or \
                         new_pos[1] >= self.height or map[new_pos[0]][new_pos[1]].population == 0:
@@ -103,7 +129,83 @@ class MyPlayer(Player):
                     continue
                 block_positions.add(new_pos)
             num += 1
-        # TODO
+        self.blocking_population = 0
+        for pos in population_positions:
+            self.blocking_population += map[pos[0]][pos[1]].population
+        for pos in block_positions:
+            if map[pos[0]][pos[1]].structure is not None and map[pos[0]][pos[1]].structure.team != player_info.team:
+                return None  # failed to block
+        upper_left = min(block_positions)
+        bottom_right = max(block_positions)
+        # TODO: boundaries
+        if upper_left[0] == 0 or bottom_right[0] == self.width - 1:
+            return None
+        for pos in block_positions:
+            if pos[1] == 0 or pos[1] == self.height - 1:
+                return None
+        floating_in_the_middle = True
+        S = (upper_left[0], upper_left[1] - 1)
+        T = (upper_left[0] - 1, upper_left[1])
+        q = [[]]  # queue for bfs
+        q[0] = [S]
+        current_dist = 0
+        maxhw = max(self.height, self.width)
+        dist = np.full((maxhw, maxhw), -1)
+        dist[S] = 0
+        value = np.empty((), dtype=object)
+        value[()] = (-1, -1)
+        dist_from = np.full((maxhw, maxhw), value, dtype=object)
+        while current_dist < len(q):
+            for pos in q[current_dist]:
+                if dist[pos] != current_dist:
+                    continue
+                for d in GC.MOVE_DIRS:
+                    new_pos = (pos[0] + d[0], pos[1] + d[1])
+                    if new_pos[0] < 0 or new_pos[0] >= self.width or new_pos[1] < 0 or new_pos[1] >= self.height:
+                        continue
+                    if floating_in_the_middle:
+                        if (pos[1] == upper_left[1] - 1 and new_pos[1] == upper_left[1]) or (
+                                pos[1] == upper_left[1] and new_pos[0] == upper_left[1] - 1):
+                            if pos[0] <= upper_left[0]:
+                                continue  # not allowed to move
+                    if map[new_pos[0]][new_pos[1]].structure is not None and map[new_pos[0]][
+                        new_pos[1]].structure.team != player_info.team:
+                        continue
+                    if new_pos in block_positions:
+                        continue
+                    new_dist = current_dist + map[new_pos[0]][new_pos[1]].passability
+                    if dist[new_pos] == -1 or new_dist < dist[new_pos]:
+                        dist[new_pos] = new_dist
+                        dist_from[new_pos] = pos
+                        while len(q) <= new_dist:
+                            q.append([])
+                        q[new_dist].append(new_pos)
+            current_dist += 1
+        if dist[T] == -1:
+            return None
+        route = [T]
+        while route[-1][0] != -1:
+            route.append(dist_from[route[-1][0], route[-1][1]])
+            if route[-1][0] != -1 and dist[route[-1][0], route[-1][1]] == 0:
+                break
+        route.reverse()
+        nearest_pos = 0
+        min_dist = None
+        for i in range(len(route)):
+            if min_dist is None or (original_dist[route[i][0], route[i][1]] != -1 and original_dist[
+                route[i][0], route[i][1]] < min_dist):
+                min_dist = original_dist[route[i][0], route[i][1]]
+                nearest_pos = i
+        route = route[nearest_pos:] + route[:nearest_pos]
+        route.reverse()
+        while route[-1][0] != -1 and original_dist_from[route[-1][0], route[-1][1]] != 0:
+            route.append(original_dist_from[route[-1][0], route[-1][1]])
+        route.reverse()
+        route2 = []
+        for pos in route:
+            if map[pos[0]][pos[1]].structure is None:
+                route2.append(pos)
+        return route2
 
     def find_best_to_build(self, map, player_info):
         q = [[]]  # queue for bfs
@@ -177,13 +279,14 @@ class MyPlayer(Player):
                 if self.best_blocking is None or current_ratio > best_blocking_ratio:
                     self.best_blocking = (x, y)
                     best_blocking_ratio = current_ratio
+        self.best_blocking_route = self.route_to_block(self.best_blocking, map, player_info, dist, dist_from)
         best_tower = None
         best_tower_ratio = 0
         for x in range(self.width):
             for y in range(self.height):
                 if map[x][y].structure is None:
                     current_ratio = tower_population[x][y] / (dist[x, y] + map[x][y].passability * 24)
-                    if best_tower is None or dist[x, y] > 0 and current_ratio > best_tower_ratio:
+                    if best_tower is None or (dist[x, y] > 0 and current_ratio > best_tower_ratio):
                         best_tower = (x, y)
                         best_tower_ratio = current_ratio
         if best_tower is None:

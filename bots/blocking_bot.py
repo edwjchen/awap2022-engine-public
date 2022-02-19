@@ -5,7 +5,7 @@ import random
 from src.player import *
 from src.structure import *
 from src.game_constants import GameConstants as GC
-# from copy import deepcopy
+from copy import deepcopy
 import numpy as np
 
 
@@ -21,7 +21,8 @@ class MyPlayer(Player):
         self.height = 0
         self.tower_dirs = [(-2, 0), (-1, -1), (-1, 0), (-1, 1), (0, -2), (0, -1), (0, 0), (0, 1), (0, 2),
                            (1, -1), (1, 0), (1, 1), (2, 0)]
-        self.block_population_dirs = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        self.block_population_dirs = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1), (2, 0),
+                                      (0, 2), (-2, 0), (0, -2)]
         self.best_blocking = None
         self.best_blocking_route = None
         self.blocking_population = 0
@@ -39,6 +40,11 @@ class MyPlayer(Player):
         blocking_money = 0
         for i in range(len(self.best_blocking_route)):
             blocking_money += map[self.best_blocking_route[i][0]][self.best_blocking_route[i][1]].passability
+        #tmp = 'block' if self.blocking_population / blocking_money > tower_population / tower_money else 'build'
+        #print(
+        #    f'Choose to {tmp}, blocking_population={self.blocking_population}, blocking_money={blocking_money}, tower_population={tower_population}, tower_money={tower_money}')
+        #print(f'blocking route={self.best_blocking_route}')
+        #print(f'tower route={tower_route}')
         return self.blocking_population / blocking_money > tower_population / tower_money
 
     def play_turn(self, turn_num, map, player_info):
@@ -88,8 +94,13 @@ class MyPlayer(Player):
                     player_info.team)
             self.find_tiles(map, player_info)
             route, population = self.find_best_to_build(map, player_info)
-            if route is None:
-                break
+            choose_to_block_now = False
+            if self.choose_to_block(map, route, population):
+                choose_to_block_now = True
+                route = self.best_blocking_route
+            else:
+                if route is None:
+                    break
         self.set_bid(bid)
 
     def find_tiles(self, map, player_info):
@@ -135,6 +146,7 @@ class MyPlayer(Player):
         for pos in block_positions:
             if map[pos[0]][pos[1]].structure is not None and map[pos[0]][pos[1]].structure.team != player_info.team:
                 return None  # failed to block
+        #print(f'blocking cluster size={len(block_positions)}, population={self.blocking_population}')
         upper_left = min(block_positions)
         bottom_right = max(block_positions)
         # TODO: boundaries
@@ -151,7 +163,8 @@ class MyPlayer(Player):
         if leftmost == 0 or rightmost == self.height - 1:
             floating_in_the_middle = False
         if not floating_in_the_middle:
-            if (upper_left[0] == 0) + (bottom_right[0] == self.width - 1) + (leftmost == 0) + (rightmost == self.height - 1) == 1:
+            if (upper_left[0] == 0) + (bottom_right[0] == self.width - 1) + (leftmost == 0) + (
+                    rightmost == self.height - 1) == 1:
                 # only touch 1 boundary
                 if upper_left[0] == 0:
                     S = (0, upper_left[1] - 1)
@@ -188,6 +201,7 @@ class MyPlayer(Player):
             else:
                 # TODO: 2 boundaries
                 return None
+        #print('aaaa', S, T, floating_in_the_middle)
         q = [[]]  # queue for bfs
         q[0] = [S]
         current_dist = 0
@@ -216,6 +230,9 @@ class MyPlayer(Player):
                     if new_pos in block_positions:
                         continue
                     new_dist = current_dist + map[new_pos[0]][new_pos[1]].passability
+                    if map[new_pos[0]][new_pos[1]].structure is not None and map[new_pos[0]][
+                        new_pos[1]].structure.team == player_info.team:
+                        new_dist = current_dist
                     if dist[new_pos] == -1 or new_dist < dist[new_pos]:
                         dist[new_pos] = new_dist
                         dist_from[new_pos] = pos
@@ -228,6 +245,7 @@ class MyPlayer(Player):
         route = [T]
         while route[-1][0] != -1:
             route.append(dist_from[route[-1][0], route[-1][1]])
+            #print(f'distfrom {route[-1]} is {dist_from[route[-1][0], route[-1][1]]}')
             if route[-1][0] != -1 and dist[route[-1][0], route[-1][1]] == 0:
                 break
         route.reverse()
@@ -238,15 +256,22 @@ class MyPlayer(Player):
                 route[i][0], route[i][1]] < min_dist):
                 min_dist = original_dist[route[i][0], route[i][1]]
                 nearest_pos = i
-        route = route[nearest_pos:] + route[:nearest_pos]
+        tmp = deepcopy(route[:nearest_pos])
+        tmp.reverse()
+        route = route[nearest_pos:] + tmp
+        #print('QAQ', route)
         route.reverse()
         while route[-1][0] != -1 and original_dist_from[route[-1][0], route[-1][1]] != 0:
+            #print('append ', original_dist_from[route[-1][0], route[-1][1]], original_dist[route[-1][0], route[-1][1]])
             route.append(original_dist_from[route[-1][0], route[-1][1]])
+        route.pop()
+        #print('route reverse', route)
         route.reverse()
         route2 = []
         for pos in route:
             if map[pos[0]][pos[1]].structure is None:
                 route2.append(pos)
+        #print('route2=', route2)
         return route2
 
     def find_best_to_build(self, map, player_info):
@@ -339,7 +364,12 @@ class MyPlayer(Player):
             for y in range(self.height):
                 if not other_reachable[x, y]:
                     continue
-                current_ratio = tower_population_other[x][y] / dist[x, y]
+                if dist[x, y] == 0:
+                    current_ratio = tower_population_other[x][y]
+                elif dist[x, y] == -1:
+                    current_ratio = tower_population_other[x][y] / 10000
+                else:
+                    current_ratio = tower_population_other[x][y] / dist[x, y]
                 # TODO: this ratio is a very inaccurate heuristic
                 if self.best_blocking is None or current_ratio > best_blocking_ratio:
                     self.best_blocking = (x, y)

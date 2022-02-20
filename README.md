@@ -1,3 +1,5 @@
+Checkout our latest bot at [blocking_bot_v2.py](bots/blocking_bot_v2.py)!
+
 # AWAP 2022 Game Engine
 
 This is the AWAP 2022 game engine.

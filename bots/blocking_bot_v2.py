@@ -201,8 +201,57 @@ class MyPlayer(Player):
                             T = max(T, pos[0])
                     S = (S - 1, 0)
                     T = (T + 1, 0)
+            elif (upper_left[0] == 0) + (bottom_right[0] == self.width - 1) + (leftmost == 0) + (
+                    rightmost == self.height - 1) == 2:
+                if (upper_left[0] == 0) + (leftmost == 0) == 2:
+                    S = -1
+                    for pos in block_positions:
+                        if pos[1] == 0:
+                            S = max(S, pos[0])
+                    S = (S + 1, 0)
+                    T = -1
+                    for pos in block_positions:
+                        if pos[0] == 0:
+                            T = max(T, pos[1])
+                    T = (0, T + 1)
+                elif (upper_left[0] == 0) + (rightmost == self.height - 1) == 2:
+                    S = -1
+                    for pos in block_positions:
+                        if pos[1] == self.height - 1:
+                            S = max(S, pos[0])
+                    S = (S + 1, self.height - 1)
+                    T = 10000
+                    for pos in block_positions:
+                        if pos[0] == 0:
+                            T = min(T, pos[1])
+                    T = (0, T - 1)
+                elif (bottom_right[0] == self.width - 1) + (leftmost == 0) == 2:
+                    S = 10000
+                    for pos in block_positions:
+                        if pos[1] == 0:
+                            S = min(S, pos[0])
+                    S = (S - 1, 0)
+                    T = -1
+                    for pos in block_positions:
+                        if pos[0] == self.width - 1:
+                            T = max(T, pos[1])
+                    T = (self.width - 1, T + 1)
+                elif (bottom_right[0] == self.width - 1) + (rightmost == self.height - 1) == 2:
+                    S = 10000
+                    for pos in block_positions:
+                        if pos[1] == self.height - 1:
+                            S = min(S, pos[0])
+                    S = (S - 1, self.height - 1)
+                    T = 10000
+                    for pos in block_positions:
+                        if pos[0] == self.width - 1:
+                            T = min(T, pos[1])
+                    T = (self.width - 1, T - 1)
+                else:
+                    # across the whole map
+                    return None
             else:
-                # TODO: 2 boundaries
+                # >= 3 boundaries
                 return None
         #print('aaaa', S, T, floating_in_the_middle)
         q = [[]]  # queue for bfs
@@ -375,7 +424,7 @@ class MyPlayer(Player):
                     current_ratio = tower_population_other[x][y] / 10000
                 else:
                     current_ratio = tower_population_other[x][y] / dist[x, y]
-                # TODO: this ratio is a very inaccurate heuristic
+                # TODO: this ratio is a very inaccurate heuristic (the biggest issue in this code)
                 if self.best_blocking is None or current_ratio > best_blocking_ratio:
                     self.best_blocking = (x, y)
                     best_blocking_ratio = current_ratio

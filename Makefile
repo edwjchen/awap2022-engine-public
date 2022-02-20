@@ -24,3 +24,9 @@ merge2:
 
 merge3:
 	python3 run_game.py -m island -p1 merged_bot -p2 random_bot
+
+clusters:
+	python3 run_game.py -m clusters -p1 blocking_bot -p2 merged_bot
+
+clusters2:
+	python3 run_game.py -m clusters -p2 blocking_bot -p1 merged_bot
